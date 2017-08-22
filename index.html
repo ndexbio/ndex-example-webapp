@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="bower_components/jquery/dist/jquery.js"></script>
+<script src="ndex-client.js"></script>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+-->
+<script>
+
+    /*
+    $(document).ready(function(){
+        $("#button1").click(function(){
+            $("#div1").load("http://www.ndexbio.org/rest/network/73d1a893-6186-11e5-8ac5-06603eb7f303");
+        });
+    });
+*/
+    // convenient sign-in function
+    signIn = function (userName, password){
+        ndexClient.authenticateUser(userName, password, {
+            success: function (data) {
+                ndexClient.setUserCredentials(data.userName, data.externalId, password);
+                $("#auth").text(data.firstName + " " + data.lastName);
+            },
+            error: function (error, status) {
+                $("#auth").text(error);
+
+            }
+        })
+    };
+
+    var currentCX = [];
+
+    $(document).ready(function(){
+        $("#authButton").click(function(){
+            signIn("dexterpratt", "akt1gsk3b2")
+        });
+    });
+
+    $(document).ready(function(){
+        $("#button1").click(function(){
+            ndexClient.getNetworkSummary("73d1a893-6186-11e5-8ac5-06603eb7f303",
+                {
+                    success : function(data){
+                        $("#div1").text(JSON.stringify(data, 4));
+                    },
+                    error : function() {
+                        $("#div1").text("ndex error");
+                    }
+                });
+        });
+    });
+
+    $(document).ready(function(){
+        $("#userInfoButton").click(function(){
+            $("#userInfo").text(JSON.stringify(ndexClient.getUserInfo()));
+        });
+    });
+
+    $(document).ready(function(){
+        $("#privateNetworkButton").click(function(){
+            ndexClient.getNetwork("64aadab0-7d25-11e7-a10d-0ac135e8bacf",
+                {
+                    success : function(data){
+                        currentCX = data;
+                        $("#privateNetwork").text(currentCX.length);
+                    },
+                    error : function(error, status) {
+                        $("#privateNetwork").text(status);
+                    }
+                });
+        });
+    });
+
+    $(document).ready(function(){
+        $("#createNetworkButton").click(function(){
+            ndexClient.createNetwork(currentCX,
+                {
+                    success : function(data){
+                        var url = ndexClient.getUUIDfromURL(data)
+                        $("#newNetwork").text(url);
+                    },
+                    error : function(error, status) {
+                        $("#newNetwork").text(status);
+                    }
+                });
+        });
+    });
+
+</script>
+</head>
+<body>
+
+
+
+<button id="button1">Get Network Summary</button>
+<div id="div1"><h2>(network summary)</h2></div>
+
+<button id="button2">Get Network</button>
+<div id="div2"><h2>(network)</h2></div>
+
+
+<button id="authButton">Sign in Dexter</button>
+<div id="auth"><h2>(status)</h2></div>
+
+
+<button id="userInfoButton">get user info</button>
+<div id="userInfo"><h2>(info)</h2></div>
+
+<button id="privateNetworkButton">get a private network from dexter </button>
+<div id="privateNetwork"><h2>(network)</h2></div>
+
+<button id="createNetworkButton">write currentCX as new network </button>
+<div id="newNetwork"><h2>(new network...)</h2></div>
+
+</body>
+</html>
