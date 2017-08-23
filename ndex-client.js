@@ -37,13 +37,12 @@
         /*---------------------------------------------------------------------*
          * Errors
          *---------------------------------------------------------------------*/
-/*
-        var ndexError = function (string) {
+         var ndexError = function (string) {
             console.log(string);
         };
-*/
+
         /*---------------------------------------------------------------------*
-         * ID, Authentication, Credentials, Abort
+         * ID, Authentication, Credentials
          *---------------------------------------------------------------------*/
 
         // public functions
@@ -186,14 +185,20 @@
          * returns a jXHR object
          *---------------------------------------------------------------------*/
 
+        // note that only success and error are used in the options parameter
         var ndexAjax = function (method, route, data, options) {
             var url = "http://" + clientSettings.ndexServerUri + "/v2" + route;
-            options.method = method;
-            if (data){
-                options.data = data;
+            var ajax_options = {};
+            if (options) {
+                if (options.success) ajax_options.success = options.success;
+                if (options.error) ajax_options.error = options.error;
             }
-            addAuth(getEncodedUser(), options);
-            return $.ajax(url, options);
+            ajax_options.method = method;
+            if (data){
+                ajax_options.data = data;
+            }
+            addAuth(getEncodedUser(), ajax_options);
+            return $.ajax(url, ajax_options);
         };
 
         /*---------------------------------------------------------------------*
@@ -205,28 +210,91 @@
          * Search
          *---------------------------------------------------------------------*/
         // Search Networks POST /search/network?start={number}&size={number}
-        _ndexClientObject.searchNetworks = function (query, startPage, pageSize, options) {
-            return ndexAjax('POST', '/search/network?start=' + startPage + ' size=' + pageSize , query, options);
+        // options:
+        // searchString
+        // permission
+        // includeGroups
+        // accountName
+        // startPage
+        // pageSize
+        // success
+        // error
+        //
+        // python: search_networks(self, search_string="", account_name=None, start=0, size=100, include_groups=False)
+        _ndexClientObject.searchNetworks = function (options) {
+            var pageSize = options.pageSize ? options.pageSize : 100;
+            var startPage = options.startPage ? options.startPage : 0;
+            var query = {};
+            if (options.searchString){
+                query.searchString = options.searchString;
+            } else {
+                ndexError("searchNetworks options must include searchString");
+            }
+            if (options.includeGroups){
+                query.includeGroups = options.includeGroups;
+            } else {
+                query.includeGroups = false;
+            }
+            if (options.permission) query.permission = options.permission;
+            if (options.accountName) query.accountName = options.accountName;
+            return ndexAjax('POST', '/search/network?start=' + startPage + '$size=' + 'pageSize',
+                query,
+                options);
         };
 
         // Search Networks POST /search/user?start={number}&size={number}
-        _ndexClientObject.searchUsers = function (query, startPage, pageSize, options) {
-            return ndexAjax('POST', '/search/user?start=' + startPage + ' size=' + pageSize , query, options);
+        _ndexClientObject.searchUsers = function (options) {
+            var pageSize = options.pageSize ? options.pageSize : 100;
+            var startPage = options.startPage ? options.startPage : 0;
+            var query = {};
+            if (options.searchString){
+                query.searchString = options.searchString;
+            } else {
+                ndexError("searchUsers options must include searchString");
+            }
+            return ndexAjax('POST', '/search/user?start=' + startPage + '$size=' + 'pageSize',
+                query,
+                options);
         };
 
         // Search Groups POST /search/group?start={number}&size={number}
-        _ndexClientObject.searchGroups = function (query, startPage, pageSize, options) {
-            return ndexAjax('POST', '/search/group?start=' + startPage + ' size=' + pageSize , query, options);
+        _ndexClientObject.searchGroups = function (options) {
+            var pageSize = options.pageSize ? options.pageSize : 100;
+            var startPage = options.startPage ? options.startPage : 0;
+            var query = {};
+            if (options.searchString){
+                query.searchString = options.searchString;
+            } else {
+                ndexError("searchGroups options must include searchString");
+            }
+            return ndexAjax('POST', '/search/group?start=' + startPage + '$size=' + 'pageSize',
+                query,
+                options);
         };
 
         // Get a network 'neighborhood'
         // POST /search/network/{networkId}/query
-        _ndexClientObject.searchGroups = function (networkId, searchString, searchDepth, edgeLimit, options) {
-            var query = {
-                searchString: searchString,
-                searchDepth: searchDepth,
-                edgeLimit: edgeLimit
-            };
+        // python: get_neighborhood_as_cx_stream(self, network_id, search_string, search_depth=1, edge_limit=2500)
+        _ndexClientObject.getNetworkNeighborhood = function (networkId, options) {
+            var query = {};
+            if (options.searchString){
+                query.searchString = options.searchString;
+            } else {
+                ndexError("searchGroups options must include searchString");
+            }
+            if (options.searchDepth){
+                if (options.searchDepth > 3){
+                    ndexError("searchDepth = " + options.searchDepth + " exceeds the maximum of 3");
+                }
+                query.searchDepth = options.searchDepth;
+            } else {
+                query.searchDepth = 1;
+            }
+            if (options.edgeLimit){
+                query.edgeLimit = options.edgeLimit;
+            } else {
+                query.edgeLimit = 1500;
+            }
             return ndexAjax('POST', '/search/network' + networkId + '/query', query, options);
         };
 
@@ -239,11 +307,13 @@
             // Server API: Authenticate User
             // GET /user?valid=true
             var url = "http://" + clientSettings.ndexServerUri + "/v2/user?valid=true";
-            options.headers = {
+            var ajax_options = {};
+            if (options.success) ajax_options.success = options.success;
+            if (options.error) ajax_options.error = options.error;
+            ajax_options.headers = {
                 'Authorization': "Basic " + btoa(userName + ":" + password)
             };
-            options.data = {format: 'json'};
-            return $.ajax(url, options);
+            return $.ajax(url, ajax_options);
         };
 
         /*---------------------------------------------------------------------*
@@ -260,6 +330,8 @@
         // default processing of data is turned off
         // instead CX is explicitly processed into a blob and appended to
         // the form data using the attribute CXNetworkStream
+        //
+        // python: save_cx_stream_as_new_network
         _ndexClientObject.createNetwork = function (cx, options) {
             var formData = new FormData();
             var content = JSON.stringify(cx);
@@ -284,18 +356,23 @@
         // Update a network PUT /network/{networkid}
 
         // Delete a network DELETE /network/{networkid}
-        _ndexClientObject.deleteNetwork = function (networkId, options) {
-            return ndexAjax('DELETE', '/network/' + networkId, null, options);
+        // python: update_cx_network
+        _ndexClientObject.deleteNetwork = function (networkId, ajax_options) {
+            return ndexAjax('DELETE', '/network/' + networkId, null, ajax_options);
         };
 
         // Get Complete Network in CX format GET  /network/{networkid}?accesskey={accessKey}
-        _ndexClientObject.getNetwork = function (networkId, options) {
-            return ndexAjax('GET', '/network/' + networkId, null, options);
+        // python: get_network_as_cx_stream(self, network_id):
+        // (stream vs. complete?)
+        _ndexClientObject.getNetwork = function (networkId, ajax_options) {
+            return ndexAjax('GET', '/network/' + networkId, null, ajax_options);
         };
 
+        // python: get_network_aspect_as_cx_stream(self, network_id, aspect_name):
+
         // Get Network Sample GET /network/{networkid}/sample?accesskey={accessKey}
-        _ndexClientObject.getNetworkSample = function (networkId, options) {
-            return ndexAjax('GET', '/network/' + networkId + '/sample', null, options);
+        _ndexClientObject.getNetworkSample = function (networkId, ajax_options) {
+            return ndexAjax('GET', '/network/' + networkId + '/sample', null, ajax_options);
         };
 
         // TODO
@@ -303,8 +380,8 @@
         // /network/{networkid}/sample
 
         // Set Network System Properties PUT /network/{networkId}/systemproperty
-        _ndexClientObject.setNetworkSystemProperties = function (networkId, properties, options) {
-            return ndexAjax('PUT', '/network/' + networkId + '/systemproperty', properties, options);
+        _ndexClientObject.setNetworkSystemProperties = function (networkId, properties, ajax_options) {
+            return ndexAjax('PUT', '/network/' + networkId + '/systemproperty', properties, ajax_options);
         };
 
         // Get All Permissions on a Network GET
