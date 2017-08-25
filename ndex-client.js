@@ -242,6 +242,31 @@
                 options);
         };
 
+        // Search Networks by Gene/Protein  POST   /search/network/genes?start={number}&size={number}
+        // TODO - does this query use the account / group / permissions parameters?
+        _ndexClientObject.searchNetworksGenes = function (options) {
+            var pageSize = options.pageSize ? options.pageSize : 100;
+            var startPage = options.startPage ? options.startPage : 0;
+            var query = {};
+            if (options.searchString){
+                query.searchString = options.searchString;
+            } else {
+                ndexError("searchNetworksGenes options must include searchString");
+            }
+            /*
+            if (options.includeGroups){
+                query.includeGroups = options.includeGroups;
+            } else {
+                query.includeGroups = false;
+            }
+            if (options.permission) query.permission = options.permission;
+            if (options.accountName) query.accountName = options.accountName;
+            */
+            return ndexAjax('POST', '/search/network/genes?start=' + startPage + '$size=' + 'pageSize',
+                query,
+                options);
+        };
+
         // Search Networks POST /search/user?start={number}&size={number}
         _ndexClientObject.searchUsers = function (options) {
             var pageSize = options.pageSize ? options.pageSize : 100;
@@ -280,7 +305,7 @@
             if (options.searchString){
                 query.searchString = options.searchString;
             } else {
-                ndexError("searchGroups options must include searchString");
+                ndexError("getNetworkNeighborhood options must include searchString");
             }
             if (options.searchDepth){
                 if (options.searchDepth > 3){
@@ -296,6 +321,24 @@
                 query.edgeLimit = 1500;
             }
             return ndexAjax('POST', '/search/network' + networkId + '/query', query, options);
+        };
+
+        // Advanced Query POST /search/network/{networkId}/advancedquery
+        // TODO review function name
+        _ndexClientObject.getNetworkFiltered = function (networkId, options) {
+            var query = {};
+            if (options.nodeFilter){
+                query.nodeFilter = options.nodeFilter;
+            }
+            if (options.edgeFilter){
+                query.edgeFilter = options.edgeFilter;
+            }
+            if (options.edgeLimit){
+                query.edgeLimit = options.edgeLimit;
+            } else {
+                query.edgeLimit = 1500;
+            }
+            return ndexAjax('POST', '/search/network' + networkId + '/advancedquery', query, options);
         };
 
         /*---------------------------------------------------------------------*
@@ -316,6 +359,14 @@
             return $.ajax(url, ajax_options);
         };
 
+        // TODO get users by uuids
+
+
+        /*---------------------------------------------------------------------*
+         * Groups
+         *---------------------------------------------------------------------*/
+
+        // TODO get groups by uuids
         /*---------------------------------------------------------------------*
          * Networks
          *---------------------------------------------------------------------*/
@@ -332,6 +383,7 @@
         // the form data using the attribute CXNetworkStream
         //
         // python: save_cx_stream_as_new_network
+
         _ndexClientObject.createNetwork = function (cx, options) {
             var formData = new FormData();
             var content = JSON.stringify(cx);
@@ -352,11 +404,22 @@
             return elements[elements.length - 1];
         };
 
-        // TODO
         // Update a network PUT /network/{networkid}
+        _ndexClientObject.updateNetwork = function (networkId, cx, options) {
+            var formData = new FormData();
+            var content = JSON.stringify(cx);
+            var blob = new Blob([content], { type: "application/octet-stream"});
+            formData.append('CXNetworkStream', blob);
+            var url = "http://" + clientSettings.ndexServerUri + "/v2/network/" + networkId;
+            options.method = "PUT";
+            options.processData = false;
+            options.contentType = false;
+            options.data = formData;
+            addAuth(getEncodedUser(), options);
+            return $.ajax(url, options);
+        };
 
         // Delete a network DELETE /network/{networkid}
-        // python: update_cx_network
         _ndexClientObject.deleteNetwork = function (networkId, ajax_options) {
             return ndexAjax('DELETE', '/network/' + networkId, null, ajax_options);
         };
@@ -368,7 +431,38 @@
             return ndexAjax('GET', '/network/' + networkId, null, ajax_options);
         };
 
+
+        // Get Aspects of a Network POST /batch/network/{networkid}/aspect
+        _ndexClientObject.getNetworkAspects = function(networkId, options){
+            var query = {};
+            if (options.aspects){
+                query = options.aspects;
+            } else {
+                ndexError("getNetworkAspects options must include aspects");
+            }
+            return ndexAjax('POST', '/batch/network' + networkId + '/aspect', query, options);
+        };
+
         // python: get_network_aspect_as_cx_stream(self, network_id, aspect_name):
+        // Get a Network Aspect As CX  GET  /network/{networkid}/aspect/{aspectName}?size={limit}
+        _ndexClientObject.getNetworkAspect = function (networkId, options) {
+            var aspectName;
+            if (options.aspectName) {
+                aspectName = options.aspectName;
+            } else {
+                ndexError("getNetworkAspect options must include aspectName");
+            }
+            var query = {};
+            if (options.size) {
+                query.size = options.size;
+            }
+            return ndexAjax('GET', '/network/' + networkId + '/aspect/' + aspectName, query, options);
+        };
+
+        // Update an Aspect of a Network PUT /network/{networkid}/aspect/{aspectName}
+        _ndexClientObject.updateNetworkAspect = function (networkId, aspect_name, cx, ajax_options) {
+            return ndexAjax('PUT', '/network/' + networkId + '/aspect/' + aspect_name, cx, ajax_options);
+        };
 
         // Get Network Sample GET /network/{networkid}/sample?accesskey={accessKey}
         _ndexClientObject.getNetworkSample = function (networkId, ajax_options) {
@@ -378,11 +472,29 @@
         // TODO
         // Set Sample Network PUT
         // /network/{networkid}/sample
+        _ndexClientObject.setNetworkSample = function (networkId, cx, ajax_options) {
+            return ndexAjax('PUT', '/network/' + networkId + '/sample', cx, ajax_options);
+        };
+
+        // Set Network Properties PUT /network/{networkid}/properties
+        // Updates the NetworkAttributes aspect the network specified by ‘networkId’
+        // based on the list of NdexPropertyValuePair objects in the PUT data.
+        _ndexClientObject.setNetworkProperties = function (networkId, property_value_pairs, ajax_options) {
+            return ndexAjax('PUT', '/network/' + networkId + '/properties', property_value_pairs, ajax_options);
+        };
+
+        _ndexClientObject.setNetworkProfile = function (networkId, properties, ajax_options) {
+            return ndexAjax('PUT', '/network/' + networkId + '/profile', properties, ajax_options);
+        };
 
         // Set Network System Properties PUT /network/{networkId}/systemproperty
         _ndexClientObject.setNetworkSystemProperties = function (networkId, properties, ajax_options) {
             return ndexAjax('PUT', '/network/' + networkId + '/systemproperty', properties, ajax_options);
         };
+
+        /*---------------------------------------------------------------------*
+         * Network Permissions
+         *---------------------------------------------------------------------*/
 
         // Get All Permissions on a Network GET
         // /network/{networkid}/permission?type={user|group}&permission={permission}&start={startPage}&size={pageSize}
@@ -419,7 +531,124 @@
             return ndexAjax('DELETE', '/network/' + networkId + '/permission', args, options);
         };
 
+        // TODO get network summaries by uuids
 
+        /*---------------------------------------------------------------------*
+         * Network Sets
+         *---------------------------------------------------------------------*/
+
+/*
+
+ Create a Network Set
+
+ /networkset
+
+ Method: POST
+
+ Authentication: Required
+
+ Description: Create a network set. The posted object should have these 2 fields:
+
+ name: String. A short name for the network set. Names are not unique across all users, but they should be unique within a user.
+ description: String. Optional.
+ Update a Network Set
+
+ /networkset/{networksetid}
+
+ Method: PUT
+
+ Authentication: Required
+
+ Description:
+
+ Updates a project based on the serialized project object in the PUT data.
+ The structure of the posted project should be:
+ { “name”: string, “description”: string}
+ Delete a Network Set
+
+ /networkset/{networksetid}
+
+ Method: DELETE
+
+ Authentication: Required
+
+ Description: Deletes a network set.
+
+ Get a Network Set
+
+ /networkset/{networksetid}?accesskey={accesskey}
+
+ Method: GET
+
+ Authentication: Not required
+
+ Description:
+
+ Returned object has this structure:
+ {
+ “name”: string,
+ “description” : string,
+ “Networks”: [ network_ids]
+ }
+ Add networks to Network Set
+
+ /networkset/{networksetid}/members
+
+ Method: POST
+
+ Authentication: Required
+
+ Description: Add a list of networks to this set. The posted data is a list of network ids. All the networks should be visible to the owner of network set.
+
+ Delete networks from Network Set
+
+ /networkset/{networksetid}/members
+
+ Method: DELETE
+
+ Authentication: Required
+
+ Description: Delete networks from a networks set. Posted data is a list of network ids.
+
+ Get Access key of Network Set
+
+ /networkset/{networksetid}/accesskey
+
+ Method: GET
+
+ Authentication: Required
+
+ Description: This function returns an access key to the user. This access key will allow any user to have read access to member networks of this network set regardless if that user has READ privilege on that network
+
+ The caller has to be the owner of this network set.
+ If an access key was not enabled it reurns http code 204.
+ If an access key has been turned on, this function returns the key.
+ Disable/Enable Access Key on Network Set
+
+ /networkset/{networksetid}/accesskey?action={disable|enable}
+
+ Method: PUT
+
+ Authentication: Required
+
+ Description: This function turns on/off the access key. It returns the key when it is enabled, and returns http code 204 when it is disabled.
+
+ Update Network Set System Properties
+
+ /networkset/{networksetId}/systemproperty
+
+ Method: PUT
+
+ Authentication: Required
+
+ Description:
+
+ Network Set System properties are the properties that describe the network set’s status in a particular NDEx server.
+ Sets the system property specified in the PUT data for the network set specified by networksetid.
+ As of NDEx V2.0 the supported system properties are:
+ showcase: boolean. Authenticated user can use this property to control whether this network set will display in his or her home page. Caller will receive an error if the user is not the owner of the network set.
+ PUT data format: {property: value} such as { “showcase”: true}
+ */
         /*---------------------------------------------------------------------*
          * ****  Finally, return the client object  ****
          *---------------------------------------------------------------------*/

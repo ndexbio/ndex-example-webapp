@@ -86,11 +86,17 @@
         });
     });
 
+    $(document).ready(function(){
+        //$("#code1").text(signIn.toString());
+        $("#code1").html(JSON.stringify(signIn.toString(), undefined, 4));
+
+    });
+
 </script>
 </head>
 <body>
 
-
+<div id="code1"></div>
 
 <button id="button1">Get Network Summary</button>
 <div id="div1"><h2>(network summary)</h2></div>
