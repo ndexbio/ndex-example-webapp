@@ -32,7 +32,6 @@
             _niceCXObject.provenance = null;
 
 
-
             _niceCXObject.niceCXError = function (message) {
                 console.log("niceCXError = " + message)
             };
@@ -66,7 +65,7 @@
                 if (nodeAttributesElement['po'] == undefined) {
                     _niceCXObject.niceCXError('nodeAttributesElement has no po property');
                 } else {
-                    _niceCXObject.nodeAttributes[edgeElement['po']] = nodeAttributesElement;
+                    _niceCXObject.nodeAttributes[nodeAttributesElement['po']] = nodeAttributesElement;
                 }
             };
 
@@ -74,7 +73,7 @@
                 if (edgeAttributesElement['po'] == undefined) {
                     _niceCXObject.niceCXError('edgeAttributesElement has no po property');
                 } else {
-                    _niceCXObject.edgeAttributes[edgeElement['po']] = edgeAttributesElement;
+                    _niceCXObject.edgeAttributes[edgeAttributesElement['po']] = edgeAttributesElement;
                 }
             };
 
@@ -94,7 +93,78 @@
                 }
             };
 
+            _niceCXObject.addNodeCitations = function (node_citation_element) {
+                buildManyToManyRelation('nodeCitations', node_citation_element, 'citations');
+            };
 
+            _niceCXObject.addEdgeCitations = function (edge_citation_element) {
+                buildManyToManyRelation('edgeCitations', edge_citation_element, 'citations');
+            };
+
+            var buildManyToManyRelation = function (aspect_name, element, relation_name) {
+                var aspect;
+                if (aspect_name == 'nodeCitations') {
+                    aspect = _niceCXObject.nodeCitations;
+                } else if (aspect_name == 'edgeCitations') {
+                    aspect = _niceCXObject.edgeCitations
+                } else {
+                    _niceCXObject.niceCXError('Only nodeCitations and edgeCitations are supported. ' + aspect_name + ' was supplied');
+                }
+                for (var i = 0; i < element['po'].length; i++) {
+                    var aspect_element_id = element['p0'][i];
+                    var aspect_element = aspect[aspect_element_id];
+                    if (aspect_element == undefined) {
+                        aspect[aspect_element_id] = element[relation_name];
+                    } else {
+                        $.merge(aspect[aspect_element_id], element[relation_name]);
+                        $.uniqueSort(aspect[aspect_element_id]);
+                    }
+
+                }
+            };
+
+            _niceCXObject.addOpaqueAspectElement = function(aspect_name, element) {
+                var aspectElements = _niceCXObject.opaqueAspects[aspect_name];
+                if (aspectElements == undefined) {
+                    aspectElements = [];
+                    _niceCXObject.opaqueAspects[aspect_name] = aspectElements;
+                }
+                aspectElements.append(element);
+            };
+
+            _niceCXObject.addNodeAssociatedAspectElement = function(nodeId, aspect_name, element){
+                var aspectElements = _niceCXObject.nodeAssociatedAspects[aspect_name];
+                if (aspectElements == undefined) {
+                    aspectElements = {};
+                    _niceCXObject.nodeAssociatedAspects[aspect_name] = aspectElements;
+                }
+                aspectElements[nodeId] = element;
+            };
+ /*
+
+            }
+                addAssociatatedAspectElement(_niceCXObject.nodeAssociatedAspects, nodeId, elmt)
+
+            var addAssociatatedAspectElement = function(table, id, element){
+                aspectElements =
+
+                    table.get(elmt.getAspectName())
+                if (aspectElements is None){
+                    aspectElements = {}
+                    table.put(elmt.
+                    getAspectName(), aspectElements)
+
+                    elmts = aspectElements.
+                    get(id)
+
+                    if ((elmts is None{
+
+                        elmts = []
+                        aspectElements.put(id,
+
+                            elmts)
+                        elmts.append(elmt)
+*/
             return _niceCXObject;
         };
 
@@ -125,56 +195,10 @@
 })(window); // execute this closure on the global window
 
 /*
- _niceCXObject.
- addNodeCitations = function(
- node_citation_element{
- buildManyToManyRelation(
- 'nodeCitations', node_citation_element, 'citations')
- _niceCXObject.addEdgeCitations = function(edge_citation_element{
 
- buildManyToManyRelation('edgeCitations', edge_citation_element, 'citations')
- _niceCXObject.buildManyToManyRelation = function(aspect_name, element, relation_name{
 
- if (aspect_name == 'nodeCitations'):
- aspect = _niceCXObject.nodeCitations
- elif (aspect_name == 'edgeCitations'){
- aspect = _niceCXObject.edgeCitations
- else){
- raise Exception(
- 'Only nodeCitations and edgeCitations are supported. ' + aspect_name + ' was supplied')
 
- for po in
- element.get(CX_CONSTANTS.PROPERTY_OF.value{
- po_id = aspect.get(po)
- if (po_id is None){
- aspect[po] = element.get(relation_name)
- else)
- {
- aspect[po]
- += element.get(
- relation_name)
 
- _niceCXObject.
- addOpapqueAspect = function(opaque_element{
- if (type(opaque_element) is AspectElement){
- aspectElmts = _niceCXObject.opaqueAspects.get(opaque_element.
- getAspectName())
- if (aspectElmts is
- None){
- aspectElmts = []
- _niceCXObject.opaqueAspects[
- opaque_element.getAspectName()] =
- aspectElmts
-
- aspectElmts.append(opaque_element)
- else){
- raise Exception(
- 'Provided input was not of type AspectElement.')
-
- _niceCXObject.addNodeAssociatedAspectElement = function(nodeId, elmt{
- _niceCXObject.
-
- addAssciatatedAspectElement(_niceCXObject.nodeAssociatedAspects, nodeId, elmt)
  _niceCXObject.addEdgeAssociatedAspectElement = function(edgeId, elmt{
  _niceCXObject.
 
@@ -200,7 +224,7 @@
  elmts)
  elmts.append(elmt)
 
-*/
+ */
 
 /*
  _niceCXObject.getMetadata(self{
@@ -272,7 +296,7 @@
 
 /*
 
-// from CX
+ // from CX
 
  for (var i = 0; i < rawCX.length; i++) {
  var fragment = rawCX[i];
