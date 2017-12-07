@@ -19,7 +19,7 @@
         var cyNDEx2 = "cy ndex";
         var currentCX = [];
         var publicCX = [];
-        var cyNetworks = [];
+        //var cyNetworks = [];
         var currentNetwork = null;
         var cyNodes = null;
         var cyEdges = null;
@@ -118,23 +118,25 @@
                 url: 'http://localhost:1234/v1',
                 success: function (data) {
                     console.log(JSON.stringify(data));
-                    $("#cyrest").html("<h2>Cytoscape is running<h2></h2>");
+                    $("#cyrest_status").html("<h2>Cytoscape is running</h2>");
                     cyRest = true;
                     $.get({
                         url: 'http://localhost:1234/cyndex2/v1',
                         success: function (data) {
 
                             var version = data['data']['appVersion'];
-                            $('#cyndex2').html("<h2>CyNDEx2 " + version + "<h2>");
+                            $('#cyndex2_status').html("<h2>CyNDEx2 " + version + "</h2>");
                             cyNDEx2 = true;
                         },
-                        error: function () {
-                            $('#cyRest').html("<h2>...but cyNDEx2 is not.<h2>");
+                        error: function (data) {
+                            console.log("error catcher is working: " + data);
+                            $('#cyndex2_status').html("<h2>...but cyNDEx2 is not.</h2>");
+
                         }
                     });
                 },
                 error: function () {
-                    $('#cyRest').html("Cytoscape is not running on the local machine");
+                    $('#cyrest_status').html("<h2>Cytoscape is not running on the local machine</h2>");
                 }
             });
             $("#NDExNetworkToCytoscapeButton").click(function () {
@@ -234,8 +236,8 @@
 </head>
 <body>
 
-<div id="cyrest"><h2>status</h2></div>
-<div id="cyndex2"><h2>status</h2></div>
+<div id="cyrest_status"><h2>status</h2></div>
+<div id="cyndex2_status"><h2>status</h2></div>
 
 <button id="NDExNetworkToCytoscapeButton">Network to Cytoscape</button>
 
